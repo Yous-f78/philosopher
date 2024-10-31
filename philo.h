@@ -61,6 +61,7 @@ void    free_resources(pthread_t *threads, pthread_mutex_t *forks, t_philosopher
 void    *philosopher_routine(void *arg);
 int     check_death(t_philosopher *philo);
 int     check_meals(t_philosopher *philo);
+void    handle_single_philosopher(t_philosopher *philo, pthread_mutex_t *fork);
 
 // Function prototypes from actions.c
 void    take_forks(t_philosopher *philo, pthread_mutex_t *first_fork, pthread_mutex_t *second_fork);

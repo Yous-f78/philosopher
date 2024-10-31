@@ -1,28 +1,16 @@
 #include "philo.h"
 
-void *philosopher_routine(void *arg)
+void handle_single_philosopher(t_philosopher *philo, pthread_mutex_t *fork)
 {
-    t_philosopher   *philo;
-    pthread_mutex_t *first_fork;
-    pthread_mutex_t *second_fork;
-
-    philo = (t_philosopher *)arg;
-    set_fork_order(philo, &first_fork, &second_fork);
-    gettimeofday(&philo->last_meal_time, NULL);
-    while (1)
-    {
-        if (check_death(philo))
-            break;
-        print_status(philo, "is thinking");
-        take_forks(philo, first_fork, second_fork);
-        eat(philo);
-        put_down_forks(first_fork, second_fork);
-        if (check_meals(philo))
-            break;
-        print_status(philo, "is sleeping");
-        precise_sleep(philo, philo->params->time_to_sleep);
-    }
-    return NULL;
+    //print_status(philo, "is thinking");
+    pthread_mutex_lock(fork);
+    print_status(philo, "has taken a fork");
+    precise_sleep(philo, philo->params->time_to_die);
+    print_status(philo, "died");
+    pthread_mutex_lock(&philo->params->stop_mutex);
+    philo->params->stop = 1;
+    pthread_mutex_unlock(&philo->params->stop_mutex);
+    pthread_mutex_unlock(fork);
 }
 
 int check_death(t_philosopher *philo)
@@ -68,3 +56,34 @@ int check_meals(t_philosopher *philo)
     }
     return (0);
 }
+
+void *philosopher_routine(void *arg)
+{
+    t_philosopher   *philo;
+    pthread_mutex_t *first_fork;
+    pthread_mutex_t *second_fork;
+
+    philo = (t_philosopher *)arg;
+    set_fork_order(philo, &first_fork, &second_fork);
+    gettimeofday(&philo->last_meal_time, NULL);
+    if (philo->params->num_philosophers == 1)
+    {
+        handle_single_philosopher(philo, first_fork);
+        return NULL;
+    }
+    while (1)
+    {
+        if (check_death(philo))
+            break;
+        print_status(philo, "is thinking");
+        take_forks(philo, first_fork, second_fork);
+        eat(philo);
+        put_down_forks(first_fork, second_fork);
+        if (check_meals(philo))
+            break;
+        print_status(philo, "is sleeping");
+        precise_sleep(philo, philo->params->time_to_sleep);
+    }
+    return NULL;
+}
+
