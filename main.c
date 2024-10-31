@@ -34,6 +34,23 @@ long get_timestamp(struct timeval start_time)
     return (seconds * 1000) + (microseconds / 1000);
 }
 
+void precise_sleep(long sleep_time_ms)
+{
+    struct timeval start_time, current_time;
+    long elapsed_time_ms = 0;
+
+    gettimeofday(&start_time, NULL);
+
+    while (elapsed_time_ms < sleep_time_ms)
+    {
+        usleep(100); // Sleep for 100 microseconds to prevent busy-waiting
+        gettimeofday(&current_time, NULL);
+
+        elapsed_time_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
+                          (current_time.tv_usec - start_time.tv_usec) / 1000;
+    }
+}
+
 void *philosopher_routine(void *arg)
 {
     t_philosopher *philo = (t_philosopher *)arg;
@@ -95,7 +112,7 @@ void *philosopher_routine(void *arg)
         // Eating
         gettimeofday(&philo->last_meal_time, NULL);
         printf("%ld %d is eating\n", get_timestamp(philo->params->start_time), philo->id);
-        usleep(philo->params->time_to_eat * 1000);
+        precise_sleep(philo->params->time_to_eat);
 
         // Putting down forks
         pthread_mutex_unlock(second_fork);
@@ -103,7 +120,7 @@ void *philosopher_routine(void *arg)
 
         // Sleeping
         printf("%ld %d is sleeping\n", get_timestamp(philo->params->start_time), philo->id);
-        usleep(philo->params->time_to_sleep * 1000);
+        precise_sleep(philo->params->time_to_sleep);
     }
     return NULL;
 }
@@ -124,7 +141,7 @@ int main()
     pthread_mutex_init(&fork2, NULL);
 
     // Initialize simulation parameters
-    params.time_to_die = 2000;   // 2000 milliseconds
+    params.time_to_die = 1100;   // 2000 milliseconds
     params.time_to_eat = 500;    // 500 milliseconds
     params.time_to_sleep = 500;  // 500 milliseconds
     gettimeofday(&params.start_time, NULL);
