@@ -30,9 +30,17 @@ typedef struct s_philosopher
     int             meals_eaten;
 } t_philosopher;
 
+// Function prototypes from ft_atol.c
+long    ft_atol(const char *str, int *error);
+int     skip_whitespace(const char *str, int *i);
+int     parse_sign(const char *str, int *i);
+int     is_numeric_string(const char *str, int i);
+
 // Function prototypes from args.c
 int     parse_arguments(int argc, char **argv, t_params *params);
-long    ft_atoi(const char *str);
+long    parse_positive_long(const char *str, int *error_flag);
+int     print_error(void);
+int     print_usage(void);
 
 // Function prototypes from main.c
 void    init_params(t_params *params);

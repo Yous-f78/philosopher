@@ -3,7 +3,7 @@ NAME = philo
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -pthread
 
-SRC = main.c philosopher.c utils.c args.c setup.c cleanup.c action.c
+SRC = main.c args.c ft_atol.c setup.c cleanup.c philosopher.c actions.c utils.c
 
 OBJ_DIR = objs
 OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
