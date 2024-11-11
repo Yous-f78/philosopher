@@ -1,78 +1,92 @@
 #ifndef PHILO_H
-# define PHILO_H
+#define PHILO_H
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <pthread.h>
-# include <unistd.h>   // For usleep
-# include <sys/time.h> // For gettimeofday
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <sys/time.h>
 
-typedef struct s_params
-{
-    int             num_philosophers;
-    int             times_must_eat;
-    int             finished_philosophers;
-    long            time_to_die;
-    long            time_to_eat;
-    long            time_to_sleep;
-    struct timeval  start_time;
-    int             stop;
-    pthread_mutex_t stop_mutex;
-} t_params;
+// Language setting: Set to 1 for French output, 0 for English
+#define FRENCH 0
 
+// Color settings: Set to 1 to enable colored output, 0 to disable
+#define COLORS 1
+
+#if COLORS == 1
+    #define RED     "\033[1;31m"
+    #define BLUE    "\033[1;34m"
+    #define GREEN   "\033[1;32m"
+    #define YELLOW  "\033[1;33m"
+    #define CYAN    "\033[1;36m"
+    #define WHITE   "\033[1;37m"
+    #define ORANGE  "\033[1;38;5;208m"
+    #define PURPLE  "\033[38;5;129m"
+    #define RESET   "\033[0m"
+#else
+    #define RED     "\033[0m"
+    #define BLUE    "\033[0m"
+    #define GREEN   "\033[0m"
+    #define YELLOW  "\033[0m"
+    #define CYAN    "\033[0m"
+    #define WHITE   "\033[0m"
+    #define ORANGE  "\033[0m"
+    #define PURPLE  "\033[0m"
+    #define RESET   "\033[0m"
+#endif
+
+// Structure representing a philosopher
 typedef struct s_philosopher
 {
-    int             id;
-    pthread_mutex_t *left_fork;
-    pthread_mutex_t *right_fork;
-    t_params        *params;
-    struct timeval  last_meal_time;
-    int             meals_eaten;
-} t_philosopher;
+    int                 id;             // Philosopher's unique identifier
+    int                 meals_eaten;    // Number of meals eaten
+    long int            last_meal_time; // Timestamp of the last meal
+    pthread_t           thread;         // Thread representing the philosopher
+    pthread_mutex_t     left_fork;      // Mutex for the left fork
+    pthread_mutex_t     *right_fork;    // Pointer to the right fork mutex
+    struct s_simulation *simulation;    // Pointer to the shared simulation data
+}                       t_philosopher;
 
-// Function prototypes from ft_atol.c
-long    ft_atol(const char *str, int *error);
-int     skip_whitespace(const char *str, int *i);
-int     parse_sign(const char *str, int *i);
-int     is_numeric_string(const char *str, int i);
+// Structure containing simulation data
+typedef struct s_simulation
+{
+    int                 philosopher_count;  // Total number of philosophers
+    int                 time_to_die;        // Time (in ms) a philosopher can live without eating
+    int                 time_to_eat;        // Time (in ms) a philosopher takes to eat
+    int                 time_to_sleep;      // Time (in ms) a philosopher sleeps
+    int                 meals_required;     // Number of meals each philosopher must eat (-1 if infinite)
+    int                 someone_died;       // Flag indicating if a philosopher has died
+    long int            start_time;         // Timestamp when the simulation started
+    pthread_mutex_t     print_mutex;        // Mutex to protect printing to the console
+    pthread_mutex_t     death_mutex;        // Mutex to protect death flag
+    t_philosopher       *philosophers;      // Array of philosopher structures
+}                       t_simulation;
 
-// Function prototypes from args.c
-int     parse_arguments(int argc, char **argv, t_params *params);
-long    parse_positive_long(const char *str, int *error_flag);
-int     print_error(void);
-int     print_usage(void);
+// Function prototypes
 
-// Function prototypes from main.c
-void    init_params(t_params *params);
+// Validates the command-line arguments
+int         validate_arguments(int argc, char **argv);
 
-// Function prototypes from setup.c
-int     allocate_resources(pthread_t **threads, pthread_mutex_t **forks,
-                           t_philosopher **philos, t_params *params);
-void    init_mutexes(pthread_mutex_t *forks, t_params *params);
-void    init_philosophers(t_philosopher *philos, pthread_mutex_t *forks, t_params *params);
-void    create_philosopher_threads(pthread_t *threads, t_philosopher *philos, int num_philosophers);
+// Prints an error message and returns 1
+int         ft_error(char *message);
 
-// Function prototypes from cleanup.c
-void    join_threads(pthread_t *threads, int num_philosophers);
-void    destroy_mutexes(pthread_mutex_t *forks, t_params *params);
-void    free_resources(pthread_t *threads, pthread_mutex_t *forks, t_philosopher *philos);
+// Converts a string to an integer
+int         ft_atoi(const char *str);
 
-// Function prototypes from philosopher.c
-void    *philosopher_routine(void *arg);
-int     check_death(t_philosopher *philo);
-int     check_meals(t_philosopher *philo);
-void    handle_single_philosopher(t_philosopher *philo, pthread_mutex_t *fork);
+// Returns the current timestamp in milliseconds
+long int    timestamp(void);
 
-// Function prototypes from actions.c
-void    take_forks(t_philosopher *philo, pthread_mutex_t *first_fork, pthread_mutex_t *second_fork);
-void    eat(t_philosopher *philo);
-void    put_down_forks(pthread_mutex_t *first_fork, pthread_mutex_t *second_fork);
+// The routine executed by each philosopher thread
+void        *philosopher_routine(void *philosopher_param);
 
-// Function prototypes from utils.c
-void    set_fork_order(t_philosopher *philo, pthread_mutex_t **first_fork, pthread_mutex_t **second_fork);
-void    print_status(t_philosopher *philo, char *message);
-long    get_timestamp(struct timeval start_time);
-void    precise_sleep(t_philosopher *philo, long sleep_time_ms);
-int     check_stop(t_philosopher *philo); // ATTENTION 6 FONCTIONS
+// Sleeps for a specified number of milliseconds
+int         sleep_ms(int ms);
+
+// Prints the philosopher's action
+void        print_action(t_philosopher *philosopher, char action);
+
+// Checks if the philosopher should die based on the time since last meal
+void        check_death(t_philosopher *philosopher);
 
 #endif

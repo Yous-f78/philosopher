@@ -1,66 +1,103 @@
 #include "philo.h"
 
-void set_fork_order(t_philosopher *philo, pthread_mutex_t **first_fork, pthread_mutex_t **second_fork)
+/// @brief Returns the current timestamp in milliseconds.
+/// @return The current time in milliseconds.
+long int timestamp(void)
 {
-    if (philo->id % 2 == 0)
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+/// @brief Sleeps for the specified number of milliseconds.
+/// @param ms The number of milliseconds to sleep.
+/// @return Returns 0 on success, or -1 on error.
+int sleep_ms(int ms)
+{
+    return (usleep(ms * 1000));
+}
+
+/// @brief Prints the philosopher's action in French.
+/// @param philosopher Pointer to the philosopher structure.
+/// @param action Character representing the action ('f', 'e', 's', 'd', 't').
+/// @param elapsed_time Time elapsed since the simulation started.
+static void print_action_in_french(t_philosopher *philosopher, char action, long elapsed_time)
+{
+    int id = philosopher->id;
+
+    if (action == 'f')
+        printf("%s%ld %d a pris une fourchette\n%s", GREEN, elapsed_time, id, RESET);
+    else if (action == 'e')
+        printf("%s%ld %d mange\n%s", ORANGE, elapsed_time, id, RESET);
+    else if (action == 's')
+        printf("%s%ld %d dort\n%s", CYAN, elapsed_time, id, RESET);
+    else if (action == 'd')
+        printf("%s%ld %d est mort\n%s", RED, elapsed_time, id, RESET);
+    else if (action == 't')
+        printf("%s%ld %d réfléchit...\n%s", WHITE, elapsed_time, id, RESET);
+}
+
+/// @brief Prints the philosopher's action in English or French based on the FRENCH macro.
+/// @param philosopher Pointer to the philosopher structure.
+/// @param action Character representing the action ('f', 'e', 's', 'd', 't').
+void print_action(t_philosopher *philosopher, char action)
+{
+    int id = philosopher->id;
+    long elapsed_time = timestamp() - philosopher->simulation->start_time;
+
+    // Lock the print mutex to prevent concurrent prints
+    pthread_mutex_lock(&philosopher->simulation->print_mutex);
+
+    if (FRENCH)
     {
-        *first_fork = philo->right_fork;
-        *second_fork = philo->left_fork;
+        print_action_in_french(philosopher, action, elapsed_time);
     }
     else
     {
-        *first_fork = philo->left_fork;
-        *second_fork = philo->right_fork;
+        if (action == 'f')
+            printf("%s%ld %d has taken a fork\n%s", GREEN, elapsed_time, id, RESET);
+        else if (action == 'e')
+            printf("%s%ld %d is eating\n%s", ORANGE, elapsed_time, id, RESET);
+        else if (action == 's')
+            printf("%s%ld %d is sleeping\n%s", CYAN, elapsed_time, id, RESET);
+        else if (action == 'd')
+            printf("%s%ld %d died\n%s", RED, elapsed_time, id, RESET);
+        else if (action == 't')
+            printf("%s%ld %d is thinking\n%s", WHITE, elapsed_time, id, RESET);
     }
+
+    // Unlock the print mutex
+    pthread_mutex_unlock(&philosopher->simulation->print_mutex);
 }
 
-void print_status(t_philosopher *philo, char *message)
+/// @brief Converts the initial portion of the string pointed to by str to an integer.
+/// @param str The string to convert.
+/// @return The converted integer value.
+int ft_atoi(const char *str)
 {
-    pthread_mutex_lock(&philo->params->stop_mutex);
-    if (philo->params->stop)
+    int number = 0;
+    int index = 0;
+    int sign = 1;
+
+    // Skip whitespace characters
+    while ((9 <= str[index] && str[index] <= 13) || str[index] == 32)
+        index++;
+
+    // Check for sign indicators
+    if (str[index] == '+' || str[index] == '-')
     {
-        pthread_mutex_unlock(&philo->params->stop_mutex);
-        return;
+        if (str[index] == '-')
+            sign = -1;
+        index++;
     }
-    printf("%ld %d %s\n", get_timestamp(philo->params->start_time), philo->id, message);
-    pthread_mutex_unlock(&philo->params->stop_mutex);
-}
 
-long get_timestamp(struct timeval start_time)
-{
-    struct timeval current_time;
-    long seconds, microseconds;
-
-    gettimeofday(&current_time, NULL);
-    seconds = current_time.tv_sec - start_time.tv_sec;
-    microseconds = current_time.tv_usec - start_time.tv_usec;
-    return (seconds * 1000) + (microseconds / 1000);
-}
-
-void precise_sleep(t_philosopher *philo, long sleep_time_ms)
-{
-    struct timeval start_time, current_time;
-    long elapsed_time_ms;
-
-    gettimeofday(&start_time, NULL);
-    elapsed_time_ms = 0;
-    while (elapsed_time_ms < sleep_time_ms)
+    // Convert numeric characters to integer
+    while ('0' <= str[index] && str[index] <= '9')
     {
-        usleep(100);
-        if (check_stop(philo))
-            break;
-        gettimeofday(&current_time, NULL);
-        elapsed_time_ms = (current_time.tv_sec - start_time.tv_sec) * 1000 +
-                          (current_time.tv_usec - start_time.tv_usec) / 1000;
+        number = number * 10 + (str[index] - '0');
+        index++;
     }
-}
 
-int check_stop(t_philosopher *philo)
-{
-    int stop;
-
-    pthread_mutex_lock(&philo->params->stop_mutex);
-    stop = philo->params->stop;
-    pthread_mutex_unlock(&philo->params->stop_mutex);
-    return stop;
+    return (number * sign);
 }
